@@ -2,10 +2,12 @@
 Network and System Defence Final Projects AY 2023/2024
 
 ## Topology
-![[topology.png]]
+![plot](./imgs/topology.png)
+
 
 ## AS100
-![[as100.png]]
+![plot](./imgs/as100.png)
+
 ***AS100** is a transit Autonomous System providing network access to two customers: AS200 and AS300*
 - *Configure eBGP peering with AS200 and AS300*
 - *Configure iBGP peering between border routers*
@@ -276,7 +278,8 @@ net.mpls.platform_labels = 100000
 ```
 
 ## AS200
-![[as200.png]]
+![plot](./imgs/as200.png)
+
 *AS 200 is a customer AS connected to AS100, which provides transit services.*
 - *Setup eBGP peering with AS100*
 - *Configure iBGP peering*
@@ -390,7 +393,8 @@ iptables -A POSTROUTING -t nat -o eth1 -j MASQUERADE
 ```
 
 ## Client 200
-![[client200.png]]
+![plot](./imgs/client200.png)
+
 - *This device is sensitive, so it must be configured to use Mandatory Access Control.*
 - *OpenVPN → see later dedicated section.*
 
@@ -514,7 +518,8 @@ echo "File saved in $RECEIVE_DIR/received_file"
 ```
 
 ## AS300
-![[as300.png]]
+![plot](./imgs/as300.png)
+
 *AS 300 is a customer AS connected to AS 100, which provides transit services. It also has a*
 *lateral peering relationship with AS 400.*
 - *Setup eBGP peering with AS400 and AS100*
@@ -634,7 +639,8 @@ iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 ```
 ## DC Network
 
-![[dcnet.png]]
+![plot](./imgs/dcnet.png)
+
 *DC Network is a leaf-spine Data Center network with two leaves and two spines. There are 2 tenants (A and B) in the cloud network, each hosting two virtual machines connected to leaf1 and leaf2. The tenants are assigned one broadcast domain each.*
 - *Realize VXLAN/EVPN forwarding in the DC network to provide L2VPNs between the tenants’ machines*
 - *In L1, enable the connectivity to the external network. In other words, both tenants’ machines must reach the external network through the link between L1 and R303, including the encapsulation in OpenVPN tunnels when necessary.* 
@@ -901,7 +907,8 @@ net commit
 ```
 
 ## AS400
-![[as400.png]]
+![plot](./imgs/as400.png)
+
 *AS 400 has a lateral peering relationship with AS 300.*
 - *Setup eBGP peering with AS400 and AS100*
 
@@ -953,7 +960,8 @@ iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 ```
 
 ## Client 400
-![[client400.png]]
+![plot](./imgs/as400.png)
+
 - *This is a simple LAN device with a default route through R402.*
 
 ```Shell
