@@ -1,0 +1,50 @@
+#include <tunables/global>
+
+/usr/bin/client-script {
+  # Caratteristiche del programma
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability fowner,
+  capability fsetid,
+  capability kill,
+  capability setgid,
+  capability setuid,
+  capability sys_chroot,
+  capability setpcap,
+  capability net_bind_service,
+
+  # Accesso alla directory 'myhome'
+  /path/to/myhome/ r,
+  /path/to/myhome/** rwk,
+
+  # Limitazione dell'uso di programmi pericolosi
+  /bin/bash ix,
+  /bin/sh ix,
+  /bin/nc ix,
+  deny /usr/bin/python* rm,
+  deny /usr/bin/perl rm,
+  deny /usr/bin/ruby rm,
+  deny /usr/bin/gcc rm,
+  deny /usr/bin/make rm,
+  deny /usr/bin/wget rm,
+  deny /usr/bin/curl rm,
+  deny /bin/su rm,
+  deny /usr/bin/sudo rm,
+
+  # Negazione di accesso a tutte le altre risorse
+  /{,usr/}bin/* rm,
+  /{,usr/}sbin/* rm,
+  /lib/** rm,
+  /lib64/** rm,
+  /usr/lib/** rm,
+  /usr/lib64/** rm,
+  /{,usr/}share/** rm,
+
+  # File di configurazione AppArmor
+  /etc/apparmor.d/usr.bin.client-script r,
+
+  # Comandi permessi
+  /bin/cat ixr,
+  /bin/nc ixr,
+}
