@@ -1,13 +1,7 @@
-# NSD_Project_2324
-Network and System Defence Final Projects AY 2023/2024
-
 ## Topology
 ![plot](./imgs/topology.png)
 
-
 ## AS100
-![plot](./imgs/as100.png)
-
 ***AS100** is a transit Autonomous System providing network access to two customers: AS200 and AS300*
 - *Configure eBGP peering with AS200 and AS300*
 - *Configure iBGP peering between border routers*
@@ -23,11 +17,14 @@ conf t
 interface lo
 	ip address 1.1.0.1/16
 	ip address 2.255.1.1/32
+	mpls enable
 
 interface eth0
 	ip address 10.1.12.2/30
+	mpls enable
 interface eth1
 	ip address 10.1.2.1/30
+	mpls enable
 
 exit
 
@@ -55,12 +52,7 @@ router bgp 100
 address-family ipv4 unicast
 	neighbor 2.255.1.3 next-hop-self
 
-address-family ipv4 vpn
-	neighbor 2.255.1.3 activate
-	neighbor 2.255.1.3 next-hop-self
-	
-	# for R201 - AS200
-	neighbor 10.1.2.2 remote-as 200
+
 exit
 
 # LDP
@@ -89,34 +81,6 @@ exit
 
 ```
 
-```Shell
-# confgure VRFs
-# vpn200 for the AS200
-# added to start.sh
-
-ip link add vpn200 type vrf table 200
-
-ip link set vpn200 up
-
-ip link set eth1 master vpn200
-
-# static route
-ip route 2.0.0.0/24 10.1.2.2 vrf vpn200
-
-```
-
-```
-# write it manually
-
-# /etc/sysctl.conf
-net.mpls.conf.lo.input = 1
-net.mpls.conf.eth0.input = 1
-net.mpls.conf.vpn200.input = 1
-net.mpls.platform_labels = 100000
-
-# save and issue “sysctl -p”
-
-```
 
 R102 
 ```vtysh
@@ -126,11 +90,13 @@ conf t
 interface lo
 	ip address 1.2.0.1/16
 	ip address 2.255.1.2/32
-
+	mpls enable
 interface eth0
 	ip address 10.1.12.1/30
+	mpls enable
 interface eth1
 	ip address 10.1.23.1/30
+	mpls enable
 
 exit
 
@@ -159,20 +125,6 @@ exit
 
 ```
 
-```
-# write it manually
-
-# /etc/sysctl.conf
-net.mpls.conf.lo.input = 1
-net.mpls.conf.eth0.input = 1
-net.mpls.conf.eth1.input = 1
-#net.mpls.conf.vpn200.input = 1 NO
-#net.mpls.conf.vpn300.input = 1 NO
-net.mpls.platform_labels = 100000
-
-# save and issue “sysctl -p”
-
-```
 
 
 R103
@@ -183,11 +135,14 @@ conf t
 interface lo
 	ip address 1.3.0.1/16
 	ip address 2.255.1.3/32
+	mpls enable
 
 interface eth0
 	ip address 10.1.23.2/30
+	mpls enable
 interface eth1
 	ip address 10.1.3.1/30
+	mpls enable
 
 exit
 
@@ -215,9 +170,7 @@ router bgp 100
 address-family ipv4 unicast
 	neighbor 2.255.1.1 next-hop-self
 
-address-family ipv4 vpn
-	neighbor 2.255.1.1 activate
-	neighbor 2.255.1.1 next-hop-self
+
 
 exit
 exit
@@ -234,52 +187,10 @@ exit
 exit
 exit
 
-router bgp 100 vrf vpn300
-	address-family ipv4 unicast
-	redistribute static #all the static routes redistribute inside the bgp
-	label vpn export auto
-	rd vpn export 300:0 #route distinguisher
-	rt vpn import 300:1 #route target
-	rt vpn export 300:2
-	export vpn
-	import vpn
-exit
-exit
-
 ```
 
-```Shell
-# confgure VRFs
-# vpn300 for the AS300
-# added to start.sh
-
-ip link add vpn300 type vrf table 300
-
-ip link set vpn300 up
-
-ip link set eth1 master vpn300
-
-# static route
-ip route add 3.0.0.0/24 via 10.1.3.2 vrf vpn300 # NON SICURO
-
-```
-
-```
-# write it manually
-
-# /etc/sysctl.conf
-net.mpls.conf.lo.input = 1
-net.mpls.conf.eth0.input = 1
-net.mpls.conf.vpn300.input = 1
-net.mpls.platform_labels = 100000
-
-# save and issue “sysctl -p”
-
-```
 
 ## AS200
-![plot](./imgs/as200.png)
-
 *AS 200 is a customer AS connected to AS100, which provides transit services.*
 - *Setup eBGP peering with AS100*
 - *Configure iBGP peering*
@@ -341,7 +252,7 @@ router ospf
 	network 2.2.0.0/16 area 0
 	network 2.255.2.2/32 area 0
 	network 10.2.12.0/30 area 0
-	network 2.3.0.0/16 area 0
+	network 2.3.0.0/30 area 0
 	
 # eBGP configuration
 router bgp 200
@@ -351,7 +262,7 @@ router bgp 200
 	neighbor 2.255.2.1 update-source 2.255.2.2
 	neighbor 2.255.2.1 next-hop-self
 
-	network 2.3.0.0/16
+	network 2.3.0.0/30
 	
 	
 
@@ -393,14 +304,12 @@ iptables -A POSTROUTING -t nat -o eth1 -j MASQUERADE
 ```
 
 ## Client 200
-![plot](./imgs/client200.png)
-
 - *This device is sensitive, so it must be configured to use Mandatory Access Control.*
 - *OpenVPN → see later dedicated section.*
 
 ```Shell
 
-ip addr add 192.168.0.2/24 dev enp0s8
+ip addr add 192.168.0.2/24 dev eth0
 
 ip route add default via 192.168.0.1
 
@@ -471,7 +380,7 @@ sudo apparmor_parser -a /usr/bin/client-script
 Lo stato di ogni profilo può essere scambiato tra la modalità enforce e complain con le chiamate ad `aa-enforce` e `aa-complain` passando come parametro il percorso del file eseguibile oppure il percorso del file delle policy.
 Inoltre un profilo può essere completamente disabilitato con `aa-disable` o messo in modalità di controllo (per registrare anche le chiamate di sistema accettate) con `aa-audit`.
 ```Shell
-aa-enforce /usr/sbin/avahi-daemon
+aa-enforce /etc/apparmor.d/usr.bin.client-script
 
 aa-complain /etc/apparmor.d/usr.bin.client-script
 
@@ -508,7 +417,7 @@ echo "File sent"
 PORT=12345
 
 RECEIVE_DIR="./received_files"
-
+a
 mkdir -p "$RECEIVE_DIR"
 
 echo "Waiting for the file on the port $PORT..."
@@ -518,8 +427,6 @@ echo "File saved in $RECEIVE_DIR/received_file"
 ```
 
 ## AS300
-![plot](./imgs/as300.png)
-
 *AS 300 is a customer AS connected to AS 100, which provides transit services. It also has a*
 *lateral peering relationship with AS 400.*
 - *Setup eBGP peering with AS400 and AS100*
@@ -599,7 +506,7 @@ router bgp 300
 	# for R401 - AS400
 	neighbor 10.3.4.2 remote-as 400
 
-	network 3.3.0.0/16
+	network 3.3.0.0/30
 	
 
 ```
@@ -615,32 +522,27 @@ router bgp 300
 GW300:
 ```Shell
 
-ip addr add 3.3.0.2/16 dev eth0
-ip addr add 10.1.5.2/30 dev eth1
-
-ip route add default via 3.3.0.2
+ip addr add 3.3.0.2/30 dev eth0
+ip route add default via 3.3.0.1
 
 # for external communication
-ip link add link eth1 name eth1.10 type vlan id 10
-ip link add link eth1 name eth1.20 type vlan id 20
+ip link add link eth1 name eth1.100 type vlan id 100
+ip link add link eth1 name eth1.200 type vlan id 200
 
-ip addr add 10.10.10.1/16 dev eth1.10
-ip addr add 10.10.10.1/16 dev eth1.20
+ip addr add 10.1.5.1/16 dev eth1.100
+ip addr add 10.1.5.1/16 dev eth1.200
 
-ip link set eth1.10 up
-ip link set eth1.20 up
+ip link set eth1.100 up
+ip link set eth1.200 up
 
-ip route add 10.0.0.1 via 10.10.10.254 dev eth1.10
-ip route add 10.1.1.1 via 10.10.10.254 dev eth1.20
+ip route add 10.0.0.1/24 via 10.1.5.254 dev eth1.100
+ip route add 10.1.1.1/24 via 10.1.5.254 dev eth1.200
 
 sysctl -w net.ipv4.ip_forward=1
 iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 
 ```
 ## DC Network
-
-![plot](./imgs/dcnet.png)
-
 *DC Network is a leaf-spine Data Center network with two leaves and two spines. There are 2 tenants (A and B) in the cloud network, each hosting two virtual machines connected to leaf1 and leaf2. The tenants are assigned one broadcast domain each.*
 - *Realize VXLAN/EVPN forwarding in the DC network to provide L2VPNs between the tenants’ machines*
 - *In L1, enable the connectivity to the external network. In other words, both tenants’ machines must reach the external network through the link between L1 and R303, including the encapsulation in OpenVPN tunnels when necessary.* 
@@ -684,7 +586,7 @@ Per L1:
 # creiamo un bridge (come nel lab di 802.1x)
 net add bridge bridge ports swp3,swp4
 
-net add bridge bridge vids 10,20,30,200
+net add bridge bridge vids 10,20,100,200
 
 net add interface swp3 bridge access 10
 net add interface swp4 bridge access 20
@@ -693,7 +595,6 @@ net commit
 #assegnamo gli ip point-to-point alle interfacce
 net add interface swp1 ip add 10.1.1.1/30
 net add interface swp2 ip add 10.1.2.1/30
-net add interface swp5 ip add 10.1.5.1/30
 net add loopback lo ip add 1.1.1.1/32
 net commit
 
@@ -710,16 +611,21 @@ net commit
 
 #####
 
+net add vxlan vni10 vxlan id 10
+net add vxlan vni10 vxlan local-tunnelip 1.1.1.1
+net add vxlan vni10 bridge access 10
+
+net add vxlan vni20 vxlan id 20
+net add vxlan vni20 vxlan local-tunnelip 1.1.1.1
+net add vxlan vni20 bridge access 20
+
 net add vxlan vni100 vxlan id 100
-#net add vxlan vni100 vxlan remoteip 2.2.2.2
 net add vxlan vni100 vxlan local-tunnelip 1.1.1.1
-net add vxlan vni100 bridge access 10 # associamo vni100 (l'interfaccia) conla VLAN 10, dicendo che ha un'access port con VLAN 100 nel bridge
+net add vxlan vni100 bridge access 100
 
 net add vxlan vni200 vxlan id 200
-#net add vxlan vni200 vxlan remoteip 2.2.2.2
 net add vxlan vni200 vxlan local-tunnelip 1.1.1.1
-net add vxlan vni200 bridge access 20
-
+net add vxlan vni200 bridge access 200
 
 # MP-eBGP
 net add bgp autonomous-system 65001
@@ -734,22 +640,38 @@ net add bgp evpn advertise-all-vni
 net add vlan 10 ip address 10.0.0.254/24
 net add vlan 20 ip address 10.1.1.254/24
 
+net add vlan 100 ip address 10.1.5.254/16
+net add vlan 100 ip gateway 10.1.5.2
+
+net add vlan 200 ip address 10.1.5.254/16
+net add vlan 200 ip gateway 10.1.5.2
 
 # Add a new VXLAN interface for L3VNI
-net add vlan 50
-net add vxlan vni-1020 vxlan id 1020
-net add vxlan vni-1020 vxlan local-tunnelip 1.1.1.1
-net add vxlan vni-1020 bridge access 50
+net add vxlan vni-50 vxlan id 50
+net add vxlan vni-50 vxlan local-tunnelip 1.1.1.1
+net add vxlan vni-50 bridge access 50
+net add vxlan vni-60 vxlan id 60
+net add vxlan vni-60 vxlan local-tunnelip 1.1.1.1
+net add vxlan vni-60 bridge access 60
 
-# Bridge VIDs and VNIs and create tenant VRF
-net add vrf TEN1 vni 1020
+
+net add vrf TEN1 vni 50
 net add vlan 50 vrf TEN1
 net add vlan 10 vrf TEN1
-net add vlan 20 vrf TEN1
+net add vlan 100 vrf TEN1
+
+net add vrf TEN2 vni 60
+net add vlan 60 vrf TEN2
+net add vlan 20 vrf TEN2
+net add vlan 200 vrf TEN2
 
 net add bgp vrf TEN1 autonomous-system 65001
 net add bgp vrf TEN1 l2vpn evpn advertise ipv4 unicast
 net add bgp vrf TEN1 l2vpn evpn default-originate ipv4
+
+net add bgp vrf TEN2 autonomous-system 65001
+net add bgp vrf TEN2 l2vpn evpn advertise ipv4 unicast
+net add bgp vrf TEN2 l2vpn evpn default-originate ipv4
 
 net commit
 
@@ -780,15 +702,13 @@ net add ospf passive-interface swp3,swp4
 net commit
 
 
-net add vxlan vni100 vxlan id 100
-#net add vxlan vni100 vxlan remoteip 1.1.1.1
-net add vxlan vni100 vxlan local-tunnelip 2.2.2.2
-net add vxlan vni100 bridge access 10
+net add vxlan vni10 vxlan id 10
+net add vxlan vni10 vxlan local-tunnelip 2.2.2.2
+net add vxlan vni10 bridge access 10
 
-net add vxlan vni200 vxlan id 200
-#net add vxlan vni200 vxlan remoteip 1.1.1.1
-net add vxlan vni200 vxlan local-tunnelip 2.2.2.2
-net add vxlan vni200 bridge access 20
+net add vxlan vni20 vxlan id 20
+net add vxlan vni20 vxlan local-tunnelip 2.2.2.2
+net add vxlan vni20 bridge access 20
 
 
 # MP-eBGP
@@ -804,18 +724,22 @@ net add bgp evpn advertise-all-vni
 net add vlan 10 ip address 10.0.0.254/24
 net add vlan 20 ip address 10.1.1.254/24
 
-
 # Add a new VXLAN interface for L3VNI
-net add vlan 50
-net add vxlan vni-1020 vxlan id 1020
-net add vxlan vni-1020 vxlan local-tunnelip 2.2.2.2
-net add vxlan vni-1020 bridge access 50
+net add vxlan vni-50 vxlan id 50
+net add vxlan vni-50 vxlan local-tunnelip 2.2.2.2
+net add vxlan vni-50 bridge access 50
+net add vxlan vni-60 vxlan id 60
+net add vxlan vni-60 vxlan local-tunnelip 2.2.2.2
+net add vxlan vni-60 bridge access 60
 
 # Bridge VIDs and VNIs and create tenant VRF
-net add vrf TEN1 vni 1020
+net add vrf TEN1 vni 50
 net add vlan 50 vrf TEN1
 net add vlan 10 vrf TEN1
-net add vlan 20 vrf TEN1
+
+net add vrf TEN2 vni 60
+net add vlan 50 vrf TEN2
+net add vlan 20 vrf TEN2
 
 
 net commit
@@ -826,23 +750,21 @@ net commit
 GW300 (stessa del paragrafo precedente, riportata per completezza):
 ```Shell
 
-ip addr add 3.3.0.2/16 dev eth0
-ip addr add 10.1.5.2/30 dev eth1
-
-ip route add default via 3.3.0.2
+ip addr add 3.3.0.2/30 dev eth0
+ip route add default via 3.3.0.1
 
 # for external communication
-ip link add link eth1 name eth1.10 type vlan id 10
-ip link add link eth1 name eth1.20 type vlan id 20
+ip link add link eth1 name eth1.100 type vlan id 100
+ip link add link eth1 name eth1.200 type vlan id 200
 
-ip addr add 10.10.10.1/16 dev eth1.10
-ip addr add 10.10.10.1/16 dev eth1.20
+ip addr add 10.1.5.1/16 dev eth1.100
+ip addr add 10.1.5.1/16 dev eth1.200
 
-ip link set eth1.10 up
-ip link set eth1.20 up
+ip link set eth1.100 up
+ip link set eth1.200 up
 
-ip route add 10.0.0.1 via 10.10.10.254 dev eth1.10
-ip route add 10.1.1.1 via 10.10.10.254 dev eth1.20
+ip route add 10.0.0.1/24 via 10.1.5.254 dev eth1.100
+ip route add 10.1.1.1/24 via 10.1.5.254 dev eth1.200
 
 sysctl -w net.ipv4.ip_forward=1
 iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
@@ -907,8 +829,6 @@ net commit
 ```
 
 ## AS400
-![plot](./imgs/as400.png)
-
 *AS 400 has a lateral peering relationship with AS 300.*
 - *Setup eBGP peering with AS400 and AS100*
 
@@ -931,7 +851,7 @@ interface eth1
 # eBGP configuration
 router bgp 400
 	network 4.1.0.0/16
-	network 4.2.0.0/16
+	network 4.2.0.0/30
 	# for R302 - AS300
 	neighbor 10.3.4.1 remote-as 300
 	
@@ -960,13 +880,11 @@ iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 ```
 
 ## Client 400
-![plot](./imgs/as400.png)
-
 - *This is a simple LAN device with a default route through R402.*
 
 ```Shell
 
-ip addr add 192.168.1.0/24 dev eth0
+ip addr add 192.168.1.2/24 dev eth0
 
 ip route add default via 192.168.1.1
 
@@ -1019,17 +937,19 @@ cp /usr/share/easy-rsa/pki/issued/client2.crt /root/CA/client2
 cp /usr/share/easy-rsa/pki/private/client2.key /root/CA/client2
 
 
+cp /root/CA/ca.crt /root/CA/server
+
 # now we have to distribute the crypto material (keys, cert) to the clients
 cd /CA
 cat ca.crt
 
 
 
-ip addr add 1.0.0.2/24 dev eth0
-ip route add default via 1.0.0.1
+#ip addr add 1.0.0.2/24 dev eth0
+#ip route add default via 1.0.0.1
 
-echo 1 > /proc/sys/net/ipv4/ip_forward
-iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+#echo 1 > /proc/sys/net/ipv4/ip_forward
+#iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 
 
 ```
@@ -1075,8 +995,10 @@ key server.key
 dh dh.pem
 server 192.168.100.0 255.255.255.0
 # routes for dst outside the VPN
+push "route 192.168.0.2 255.255.255.255" #client-200
 push "route 192.168.1.0 255.255.255.0" # LAN with the client-400 (1)
 push "route 10.0.0.0 255.255.255.0" # DC Network (2)
+route 192.168.0.2 255.255.255.255
 route 192.168.1.0 255.255.255.0
 client-config-dir ccd
 client-to-client
@@ -1085,7 +1007,7 @@ cipher AES-256-GCM
 
 
 ```
-> N.B. (1) non è sufficiente poichè per raggiungere 192.168.1.0/24 bisogna passare per R402 (ovpn-client2) ed il tunnel per esso non è noto a priori. Quindi abbiamo bisogno che per l' ovpn-client2 si specifichi tale rotta in `ccd/client2`.
+
 
 ```
 #in file `/CA/server/ccd/client2`
@@ -1129,7 +1051,7 @@ cipher AES-256-GCM
 
 R402
 ```conf
-# in /ovpn/client1.ovpn
+# in /ovpn/client2.ovpn
 
 client
 dev tun
